@@ -7,9 +7,9 @@ app.use(express.json());
 
 const futbolistas =
 [
-    {id: 1, nombre: 'Lorenzo', apellido: 'apellido', lugarnac: 'italia', fechanac: 1998, equipo: 'Napoli'},
-    {id: 2, nombre: 'Juan', apellido: 'apellido', lugarnac: 'italia', fechanac: 1998, equipo: 'Napoli'},
-    {id: 3, nombre: 'Miguel', apellido: 'apellido', lugarnac: 'italia', fechanac: 1998, equipo: 'Napoli'}
+    {id: 1, nombre: 'Lorenzo', apellido: 'apellido', lugarnac: 'italia', fechanac: '21-12-1999', equipo: 'Napoli'},
+    {id: 2, nombre: 'Juan', apellido: 'apellido', lugarnac: 'italia', fechanac: '21-12-1999', equipo: 'Napoli'},
+    {id: 3, nombre: 'Miguel', apellido: 'apellido', lugarnac: 'italia', fechanac: '21-12-1999', equipo: 'Napoli'}
 
 ];
 
@@ -33,7 +33,7 @@ app.post('/api/v1/create',(req,res) => {
         nombre: Joi.string().max(15).required(),
         apellido: Joi.string().max(25).required(),
         lugarnac: Joi.string().max(25).required(),
-        fechanac: Joi.number().min(1900).max(2010),
+        fechanac: Joi.required(),
         equipo: Joi.string().max(25).required()
 
     };
@@ -48,18 +48,30 @@ app.post('/api/v1/create',(req,res) => {
     }
     else
     {
-       res.status(201).send("El Futbolista se agrego con exito");
+        var expreg = /^(?:3[01]|[12][0-9]|0?[1-9])([\-/.])(0?[1-9]|1[1-2])\1\d{4}$/;
+
+        if(expreg.test(req.body.fechanac))
+        {
+            const futbolista = {
+                id: futbolistas.length + 1,
+                nombre: req.body.nombre,
+                apellido: req.body.apellido,
+                lugarnac: req.body.lugarnac,
+                fechanac: req.body.fechanac,
+                equipo: req.body.equipo
+            };
+            futbolistas.push(futbolista);
+            res.status(201).send("El Futbolista se agrego con exito");
+            return;
+        }
+        else
+        {
+            res.status(400).send("La fecha no esta en el formato correcto")
+            return;
+        }
+        
     }
-    const futbolista = {
-        id: futbolistas.length + 1,
-        nombre: req.body.nombre,
-        apellido: req.body.apellido,
-        lugarnac: req.body.lugarnac,
-        fechanac: req.body.fechanac,
-        equipo: req.body.equipo
-    };
-    futbolistas.push(futbolista);
-    res.send(futbolista);
+    
 });
 
 
@@ -75,7 +87,7 @@ app.put('/api/v1/update/:id', (req,res) =>
         nombre: Joi.string().max(15).required(),
         apellido: Joi.string().max(25).required(),
         lugarnac: Joi.string().max(25).required(),
-        fechanac: Joi.number().min(1900).max(2010).required(),
+        fechanac: Joi.required(),
         equipo: Joi.string().max(25).required()
 
     };
@@ -86,17 +98,32 @@ app.put('/api/v1/update/:id', (req,res) =>
         res.status(400).send(result.error.details[0].message)
         return;
     }
-    
-    //update
-    futbolista.nombre = req.body.nombre;
-    futbolista.apellido = req.body.apellido;
-    futbolista.lugarnac = req.body.lugarnac;
-    futbolista.fechanac = req.body.fechanac;
-    futbolista.equipo = req.body.equipo
+    else
+    {
+        var expreg = /^(?:3[01]|[12][0-9]|0?[1-9])([\-/.])(0?[1-9]|1[1-2])\1\d{4}$/;
 
-    //return
-    res.status(204).send("El Futbolista se actualizo con exito");
-    res.send(futbolista);
+        if(expreg.test(req.body.fechanac))
+        {
+            //update
+            futbolista.nombre = req.body.nombre;
+            futbolista.apellido = req.body.apellido;
+            futbolista.lugarnac = req.body.lugarnac;
+            futbolista.fechanac = req.body.fechanac;
+            futbolista.equipo = req.body.equipo
+
+            //return
+            res.status(204).send("El Futbolista se actualizo con exito");
+            res.send(futbolista);
+        }
+        else
+        {
+            res.status(400).send("La fecha no esta en el formato correcto")
+            return;
+        }
+        
+    }
+    
+    
     
 
 

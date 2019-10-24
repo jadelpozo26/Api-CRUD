@@ -108,24 +108,7 @@ app.post('/api/v1/create',(req,res) => {
 
 app.put('/api/v1/update/:id', (req,res) => 
 {
-    //buscar 
-    Futbolistas.findOneAndUpdate({
-        id : req.params.id, update: {
-            nombre: req.body.nombre,
-            apellido: req.body.apellido,
-            lugarnac: req.body.lugarnac,
-            fechanac : req.body.fechanac,
-            equipo: req.body.equipo 
-        }, function(err, futbo) 
-        {
-            if(err) return res.status(404).send('El ID no existe')
-            
-        }
     
-             
-})
-    
-
     //validacion
     const schema = 
     {
@@ -149,11 +132,23 @@ app.put('/api/v1/update/:id', (req,res) =>
 
         if(expreg.test(req.body.fechanac))
         {
+            const Nombre = {nombre: req.body.nombre};
+            const apellido = {apellido: req.body.apellido};
+            const lugar = {lugarnac: req.body.lugarnac};
+            const fecha = {fechanac: req.body.fechanac};
+            const equipo = {equipo: req.body.equipo};
             //update
-            hola = req.params.id;
+           Futbolistas.findOneAndUpdate({id: req.params.id},{nombre: req.body.nombre, apellido: req.body.apellido, lugarnac: req.body.lugarnac, fechanac : req.body.fechanac, equipo : req.body.equipo}, function(err,courses){
+           if (err) return res.status(404).send('El ID no existe');
+           res.status(204).send("El Futbolista se actualizo con exito");
+         });
 
             
-    }
+
+            //return
+            
+
+        }
         else
         {
             res.status(400).send("La fecha no esta en el formato correcto")
@@ -161,7 +156,6 @@ app.put('/api/v1/update/:id', (req,res) =>
         }
         
     }
-    
 })
 
 app.delete('/api/v1/delete/:id', (req, res) =>
@@ -173,7 +167,7 @@ app.delete('/api/v1/delete/:id', (req, res) =>
         res.status(204).send("Los datos fueron eliminados con exito");
 
 
-    } )
+    } );
 
     //const futbolista = futbolistas.find(c => c.id === parseInt(req.params.id));
     //if(!futbolista) return res.status(404).send('El ID no existe');//404

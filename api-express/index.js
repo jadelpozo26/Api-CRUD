@@ -2,10 +2,17 @@ const Joi = require('joi');
 const express = require('express');
 const app = express();
 
-
-
+var mongoose = require('mongoose');
+mongoose.connect('mongodb://localhost:27017/EquiposdeFutbol');
+var Futbolistas = require('./base.js')
+var hola;
 
 app.use(express.json());
+
+
+
+
+
 
 const futbolistas =
 [
@@ -17,15 +24,27 @@ const futbolistas =
 
 app.get('/api/v1/read',(req, res) => 
 {
-    res.send(futbolistas);
+    Futbolistas.find({}, function(err, futbo)
+    {
+        if(err) throw err;
+
+        console.log(futbo);
+        res.send(futbo);
+    })
+    //res.send(futbolistas);
 });
 
 app.get('/api/v1/read/:id', (req, res) =>
 {
-    const futbolista = futbolistas.find(c => c.id === parseInt(req.params.id));
-    if(!futbolista) return res.status(404).send('El ID no existe');//404
-    res.send(futbolista);
-    //res.send(req.params.id)
+    Futbolistas.find({
+        id: req.params.id
+    }, function(err, futbo){
+      
+        if(futbo.length === 0) return res.status(404).send('El ID no existe');
+        res.send(futbo);
+        console.log(futbo)
+    })
+ 
 });
 
 app.post('/api/v1/create',(req,res) => {
@@ -54,15 +73,25 @@ app.post('/api/v1/create',(req,res) => {
 
         if(expreg.test(req.body.fechanac))
         {
-            const futbolista = {
-                id: futbolistas.length + 1,
-                nombre: req.body.nombre,
+            var Contador = Futbolistas.count({}, function( err, count){
+                return hola = count +1;
+            })
+
+
+            console.log(hola);
+            var nuevoFut = Futbolistas({
+                id: 10,
+               nombre: req.body.nombre,
                 apellido: req.body.apellido,
                 lugarnac: req.body.lugarnac,
                 fechanac: req.body.fechanac,
                 equipo: req.body.equipo
-            };
-            futbolistas.push(futbolista);
+            });
+
+            nuevoFut.save(function(err)
+            {
+                if(err) throw err;
+            });
             res.status(201).send("El Futbolista se agrego con exito");
             return;
         }
@@ -80,8 +109,22 @@ app.post('/api/v1/create',(req,res) => {
 app.put('/api/v1/update/:id', (req,res) => 
 {
     //buscar 
-    const futbolista = futbolistas.find(c => c.id === parseInt(req.params.id));
-    if(!futbolista) return res.status(404).send('El ID no existe');//404
+    Futbolistas.findByIdAndUpdate({
+        id : req.params.id, update: {
+            nombre: req.body.nombre,
+            apellido: req.body.apellido,
+            lugarnac: req.body.lugarnac,
+            fechanac : req.body.fechanac,
+            equipo: req.body.equipo 
+        }, function(err, futbo) 
+        {
+            if(err) return res.status(404).send('El ID no existe')
+            
+        }
+    
+             
+})
+    
 
     //validacion
     const schema = 
@@ -107,16 +150,10 @@ app.put('/api/v1/update/:id', (req,res) =>
         if(expreg.test(req.body.fechanac))
         {
             //update
-            futbolista.nombre = req.body.nombre;
-            futbolista.apellido = req.body.apellido;
-            futbolista.lugarnac = req.body.lugarnac;
-            futbolista.fechanac = req.body.fechanac;
-            futbolista.equipo = req.body.equipo
+            hola = req.params.id;
 
-            //return
-            res.status(204).send("El Futbolista se actualizo con exito");
-            res.send(futbolista);
-        }
+            
+    }
         else
         {
             res.status(400).send("La fecha no esta en el formato correcto")
@@ -125,24 +162,25 @@ app.put('/api/v1/update/:id', (req,res) =>
         
     }
     
-    
-    
-
-
 })
 
-app.delete('/api/v1/delete/:id', (req, res) =>
+app.delete('/api/v1/delete/:_id', (req, res) =>
 {
-    //buscar 
-    const futbolista = futbolistas.find(c => c.id === parseInt(req.params.id));
-    if(!futbolista) return res.status(404).send('El ID no existe');//404
+    //buscar
+    Futbolistas.findByIdAndDelete( req.params._id, function(err){
+        if(err) return res.status(404).send('El ID no existe')
+        console.log()
+        res.status(204).send("Los datos fueron eliminados con exito");
 
-    //delete
-    const index = futbolistas.indexOf(futbolista);
-    futbolistas.splice(index,1);
+
+    } )
+
+    //const futbolista = futbolistas.find(c => c.id === parseInt(req.params.id));
+    //if(!futbolista) return res.status(404).send('El ID no existe');//404
+
 
     //retornar 204
-    res.status(204).send("Los datos fueron eliminados con exito");
+    //res.status(204).send("Los datos fueron eliminados con exito");
 
 })
 //PORT

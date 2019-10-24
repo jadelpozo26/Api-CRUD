@@ -109,7 +109,7 @@ app.post('/api/v1/create',(req,res) => {
 app.put('/api/v1/update/:id', (req,res) => 
 {
     //buscar 
-    Futbolistas.findByIdAndUpdate({
+    Futbolistas.findOneAndUpdate({
         id : req.params.id, update: {
             nombre: req.body.nombre,
             apellido: req.body.apellido,
@@ -164,10 +164,10 @@ app.put('/api/v1/update/:id', (req,res) =>
     
 })
 
-app.delete('/api/v1/delete/:_id', (req, res) =>
+app.delete('/api/v1/delete/:id', (req, res) =>
 {
     //buscar
-    Futbolistas.findByIdAndDelete( req.params._id, function(err){
+    Futbolistas.findOneAndDelete( req.params.id, function(err){
         if(err) return res.status(404).send('El ID no existe')
         console.log()
         res.status(204).send("Los datos fueron eliminados con exito");

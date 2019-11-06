@@ -1,15 +1,26 @@
 const Joi = require('joi');
 const express = require('express');
+const cors = require('cors');
 const app = express();
+
+app.use(cors({origin : 'http://localhost:4200'}));
 
 var mongoose = require('mongoose');
 mongoose.connect('mongodb://localhost:27017/EquiposdeFutbol');
 var Futbolistas = require('./base.js')
 var hola;
 
+var redis = require('redis');
+var client = redis.createClient(); //creates a new client
+
+client.on('connect', function() {
+  console.log('connected');
+});
+
+
 app.use(express.json());
 
-
+let futbo=[];
 
 
 
@@ -24,38 +35,78 @@ const futbolistas =
 
 app.get('/api/v1/read',(req, res) => 
 {
-    Futbolistas.find({}, function(err, futbo)
-    {
-        if(err) throw err;
+    client.exists('llave_futbo' , function(err, reply){
+        if(reply===1)
+        {
+          client.get('llave_futbo',function(err, reply){
+            futbo = JSON.parse(reply);
+            console.log('futbolistas ya existian en redis');
+            res.status(200);
+            res.json(futbo);
+          });
+        }
+        else{
+            Futbolistas.find({}, function(err, futbo)
+            {
+                if(err) throw err;
 
-        console.log(futbo);
-        res.send(futbo);
-    })
+                let futboString = JSON.stringify(futbo);
+                client.set('llave_futbo', futboString);
+                client.expire('llave_futbo', 50);
+                console.log('NO EXISTIA EN REDIS, AHORA SI');
+                res.status(200);
+                
+                return res.send(futbo);
+            });
+        }
     //res.send(futbolistas);
 });
+});
 
-app.get('/api/v1/read/:id', (req, res) =>
+app.get('/api/v1/read/:_id', (req, res) =>
 {
+
+    client.exists('llave_futbo' + req.params._id , function(err, reply){
+        if(reply===1)
+        {
+          client.get('llave_futbo' + req.params._id,function(err, reply){
+            futbo = JSON.parse(reply);
+            console.log('futbolistas con id ya existian en redis');
+            res.status(200);
+            res.json(futbo);
+          });
+        }
+        else{
+
     Futbolistas.find({
-        id: req.params.id
+        _id: req.params._id
     }, function(err, futbo){
       
         if(futbo.length === 0) return res.status(404).send('El ID no existe');
-        res.send(futbo);
-        console.log(futbo)
+        let futboString = JSON.stringify(futbo);
+        client.set('llave_futbo' + req.params._id, futboString);
+        client.expire('llave_futbo' + req.params._id, 50);
+        console.log('no estaba en redis');
+        res.status(200);
+        
+        return res.send(futbo);
+    
     })
+        }
  
+});
 });
 
 app.post('/api/v1/create',(req,res) => {
 
     const schema = 
     {
-        nombre: Joi.string().max(15).required(),
-        apellido: Joi.string().max(25).required(),
-        lugarnac: Joi.string().max(25).required(),
-        fechanac: Joi.required(),
-        equipo: Joi.string().max(25).required()
+        _id : Joi.any(),
+        Nombre: Joi.string().max(15).required(),
+        Apellido: Joi.string().max(25).required(),
+        Nacimiento: Joi.string().max(25).required(),
+        Fecha: Joi.required(),
+        Equipo: Joi.string().max(25).required()
 
     };
     const result = Joi.validate(req.body, schema);
@@ -71,21 +122,14 @@ app.post('/api/v1/create',(req,res) => {
     {
         var expreg = /^(?:3[01]|[12][0-9]|0?[1-9])([\-/.])(0?[1-9]|1[1-2])\1\d{4}$/;
 
-        if(expreg.test(req.body.fechanac))
+        if(expreg.test(req.body.Fecha))
         {
-            var Contador = Futbolistas.count({}, function( err, count){
-                return hola = count +1;
-            })
-
-
-            console.log(hola);
-            var nuevoFut = Futbolistas({
-                id: 10,
-               nombre: req.body.nombre,
-                apellido: req.body.apellido,
-                lugarnac: req.body.lugarnac,
-                fechanac: req.body.fechanac,
-                equipo: req.body.equipo
+              var nuevoFut = Futbolistas({
+               Nombre: req.body.Nombre,
+                Apellido: req.body.Apellido,
+                Nacimiento: req.body.Nacimiento,
+                Fecha: req.body.Fecha,
+                Equipo: req.body.Equipo
             });
 
             nuevoFut.save(function(err)
@@ -106,17 +150,17 @@ app.post('/api/v1/create',(req,res) => {
 });
 
 
-app.put('/api/v1/update/:id', (req,res) => 
+app.put('/api/v1/update/:_id', (req,res) => 
 {
     
     //validacion
     const schema = 
     {
-        nombre: Joi.string().max(15).required(),
-        apellido: Joi.string().max(25).required(),
-        lugarnac: Joi.string().max(25).required(),
-        fechanac: Joi.required(),
-        equipo: Joi.string().max(25).required()
+        Nombre: Joi.string().max(15).required(),
+        Apellido: Joi.string().max(25).required(),
+        Nacimiento: Joi.string().max(25).required(),
+        Fecha: Joi.required(),
+        Equipo: Joi.string().max(25).required()
 
     };
     const result = Joi.validate(req.body, schema);
@@ -130,15 +174,15 @@ app.put('/api/v1/update/:id', (req,res) =>
     {
         var expreg = /^(?:3[01]|[12][0-9]|0?[1-9])([\-/.])(0?[1-9]|1[1-2])\1\d{4}$/;
 
-        if(expreg.test(req.body.fechanac))
+        if(expreg.test(req.body.Fecha))
         {
-            const Nombre = {nombre: req.body.nombre};
-            const apellido = {apellido: req.body.apellido};
-            const lugar = {lugarnac: req.body.lugarnac};
-            const fecha = {fechanac: req.body.fechanac};
-            const equipo = {equipo: req.body.equipo};
+            const Nombre = {Nombre: req.body.Nombre};
+            const apellido = {Apellido: req.body.Apellido};
+            const lugar = {Nacimiento: req.body.Nacimiento};
+            const fecha = {Fecha: req.body.Fecha};
+            const equipo = {Equipo: req.body.Equipo};
             //update
-           Futbolistas.findOneAndUpdate({id: req.params.id},{nombre: req.body.nombre, apellido: req.body.apellido, lugarnac: req.body.lugarnac, fechanac : req.body.fechanac, equipo : req.body.equipo}, function(err,courses){
+           Futbolistas.findOneAndUpdate({_id: req.params._id},{Nombre: req.body.Nombre, Apellido: req.body.Apellido, Nacimiento: req.body.Nacimiento, Fecha : req.body.Fecha, Equipo : req.body.Equipo}, function(err){
            if (err) return res.status(404).send('El ID no existe');
            res.status(204).send("El Futbolista se actualizo con exito");
          });
@@ -158,12 +202,12 @@ app.put('/api/v1/update/:id', (req,res) =>
     }
 })
 
-app.delete('/api/v1/delete/:id', (req, res) =>
+app.delete('/api/v1/delete/:_id', (req, res) =>
 {
     //buscar
-    Futbolistas.findOneAndDelete( req.params.id, function(err){
+    Futbolistas.findOneAndDelete( {_id: req.params._id}, function(err){
         if(err) return res.status(404).send('El ID no existe')
-        console.log()
+        console.log("hola")
         res.status(204).send("Los datos fueron eliminados con exito");
 
 

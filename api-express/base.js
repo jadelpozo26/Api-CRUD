@@ -5,12 +5,11 @@ var Schema = mongoose.Schema;
 //crear un schema en mongoose
 
 var futbolistaSchema = new Schema ({
-    id: { type: Number, required: true},
-    nombre: {type: String, required: true},
-    apellido: {type: String, required: true},
-    lugarnac: {type: String, required: true},
-    fechanac: {type: String, required: true},
-    equipo: {type: String, required: true}
+    Nombre: {type: String, required: true},
+    Apellido: {type: String, required: true},
+    Nacimiento: {type: String, required: true},
+    Fecha: {type: String, required: true},
+    Equipo: {type: String, required: true}
 })
 
 

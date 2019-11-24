@@ -1,0 +1,24 @@
+{
+    "Mongo": {
+      "dbConfig": {
+        "host": "localhost",
+        "port": 27017,
+        "dbName": "EquiposdeFutbol"
+      },
+      "credit": {
+        "initialLimit": 100,
+        "initialDays": 1
+      }
+    },
+
+    "Redis": {
+      "dbConfig": {
+        "host": "localhost",
+        "port": 6379
+      },
+      "credit": {
+        "initialLimit": 100,
+        "initialDays": 1
+      }
+    }
+  }

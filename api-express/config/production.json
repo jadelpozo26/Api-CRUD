@@ -1,0 +1,22 @@
+{
+    "Mongo": {
+        "dbConfig": {
+          "host": "mongoequipos.westus.azurecontainer.io",
+          "port": 27017,
+          "dbName": "EquiposdeFutbol"
+        },
+        "credit": {
+          "initialDays": 30
+        }
+      },
+  
+      "Redis": {
+        "dbConfig": {
+          "host": "redisequipo.westus.azurecontainer.io",
+          "port": 6379
+        },
+        "credit": {
+          "initialDays": 30
+        }
+      }
+  }

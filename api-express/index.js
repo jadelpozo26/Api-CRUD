@@ -2,20 +2,43 @@ const Joi = require('joi');
 const express = require('express');
 const cors = require('cors');
 const app = express();
+const config = require('config');
 
-app.use(cors({origin : 'http://localhost:4200'}));
+const dbConfigM = config.get('Mongo.dbConfig');
+const portM = dbConfigM.port;
+const hostM = dbConfigM.host; 
+const dbnameM = dbConfigM.dbName;
+
+
+const dbConfigR = config.get('Redis.dbConfig');
+const hostR = dbConfigR.host;
+
+console.log(dbConfigR);
+
+
+
+
+app.use(cors());
 
 var mongoose = require('mongoose');
-mongoose.connect('mongodb://localhost:27017/EquiposdeFutbol');
+mongoose.connect('mongodb://' + hostM + ':' +portM + '/' + dbnameM );
 var Futbolistas = require('./base.js')
-var hola;
+//var hola;
 
 var redis = require('redis');
-var client = redis.createClient(); //creates a new client
+var client = redis.createClient({host: hostR, port:6379}); //creates a new client
+
+var bandera = false;
 
 client.on('connect', function() {
+  bandera = true;
   console.log('connected');
 });
+
+client.on('error', function() {
+    bandera = false;
+    console.log('sin redis');
+  });
 
 
 app.use(express.json());
@@ -35,66 +58,107 @@ const futbolistas =
 
 app.get('/api/v1/read',(req, res) => 
 {
-    client.exists('llave_futbo' , function(err, reply){
-        if(reply===1)
-        {
-          client.get('llave_futbo',function(err, reply){
-            futbo = JSON.parse(reply);
-            console.log('futbolistas ya existian en redis');
-            res.status(200);
-            res.json(futbo);
-          });
-        }
-        else{
-            Futbolistas.find({}, function(err, futbo)
+    if(bandera)
+    {
+        client.exists('llave_futbo' , function(err, reply){
+            if(reply===1)
             {
-                if(err) throw err;
-
-                let futboString = JSON.stringify(futbo);
-                client.set('llave_futbo', futboString);
-                client.expire('llave_futbo', 50);
-                console.log('NO EXISTIA EN REDIS, AHORA SI');
+              client.get('llave_futbo',function(err, reply){
+                futbo = JSON.parse(reply);
+                console.log('futbolistas ya existian en redis');
                 res.status(200);
-                
-                return res.send(futbo);
-            });
-        }
-    //res.send(futbolistas);
-});
+                res.json(futbo);
+              });
+            }
+            else{
+                Futbolistas.find({}, function(err, futbo)
+                {
+                    if(err) throw err;
+    
+                    let futboString = JSON.stringify(futbo);
+                    client.set('llave_futbo', futboString);
+                    client.expire('llave_futbo', 50);
+                    console.log('NO EXISTIA EN REDIS, AHORA SI');
+                    res.status(200);
+                    
+                    return res.send(futbo);
+                });
+            }
+        //res.send(futbolistas);
+    });
+
+    }
+
+    else
+    {
+        Futbolistas.find({}, function(err, futbo)
+                {
+                    if(err) throw err;
+    
+                    let futboString = JSON.stringify(futbo);
+                    console.log('Entro sin redis');
+                    res.status(200);
+                    
+                    return res.send(futbo);
+                });
+    }
+    
 });
 
 app.get('/api/v1/read/:_id', (req, res) =>
 {
-
-    client.exists('llave_futbo' + req.params._id , function(err, reply){
-        if(reply===1)
-        {
-          client.get('llave_futbo' + req.params._id,function(err, reply){
-            futbo = JSON.parse(reply);
-            console.log('futbolistas con id ya existian en redis');
-            res.status(200);
-            res.json(futbo);
-          });
-        }
-        else{
-
-    Futbolistas.find({
-        _id: req.params._id
-    }, function(err, futbo){
-      
-        if(futbo.length === 0) return res.status(404).send('El ID no existe');
-        let futboString = JSON.stringify(futbo);
-        client.set('llave_futbo' + req.params._id, futboString);
-        client.expire('llave_futbo' + req.params._id, 50);
-        console.log('no estaba en redis');
-        res.status(200);
-        
-        return res.send(futbo);
+    if(bandera)
+    {
+        client.exists('llave_futbo' + req.params._id , function(err, reply){
+            if(reply===1)
+            {
+              client.get('llave_futbo' + req.params._id,function(err, reply){
+                futbo = JSON.parse(reply);
+                console.log('futbolistas con id ya existian en redis');
+                res.status(200);
+                res.json(futbo);
+              });
+            }
+            else{
     
-    })
-        }
- 
-});
+        Futbolistas.find({
+            _id: req.params._id
+        }, function(err, futbo){
+          
+            if(futbo.length === 0) return res.status(404).send('El ID no existe');
+            let futboString = JSON.stringify(futbo);
+            client.set('llave_futbo' + req.params._id, futboString);
+            client.expire('llave_futbo' + req.params._id, 50);
+            console.log('no estaba en redis');
+            res.status(200);
+            
+            return res.send(futbo);
+        
+        })
+            }
+     
+    });        
+    }
+    else
+    {
+        Futbolistas.find({
+            _id: req.params._id
+        }, function(err, futbo){
+          
+            if(futbo.length === 0){  res.status(404)
+                return res.send('El ID no existe');}
+            else{
+            let futboString = JSON.stringify(futbo);
+            console.log('entro sin redis');
+            res.status(200);
+            
+            return res.send(futbo);
+            }
+        
+        })
+    }
+
+    
 });
 
 app.post('/api/v1/create',(req,res) => {
@@ -183,8 +247,13 @@ app.put('/api/v1/update/:_id', (req,res) =>
             const equipo = {Equipo: req.body.Equipo};
             //update
            Futbolistas.findOneAndUpdate({_id: req.params._id},{Nombre: req.body.Nombre, Apellido: req.body.Apellido, Nacimiento: req.body.Nacimiento, Fecha : req.body.Fecha, Equipo : req.body.Equipo}, function(err){
-           if (err) return res.status(404).send('El ID no existe');
+           if (err)  {res.status(404)
+            return res.send('El ID no existe');} 
+           else{
+           
            res.status(204).send("El Futbolista se actualizo con exito");
+         return
+        }
          });
 
             
@@ -206,9 +275,14 @@ app.delete('/api/v1/delete/:_id', (req, res) =>
 {
     //buscar
     Futbolistas.findOneAndDelete( {_id: req.params._id}, function(err){
-        if(err) return res.status(404).send('El ID no existe')
-        console.log("hola")
-        res.status(204).send("Los datos fueron eliminados con exito");
+        if(err){ 
+            res.status(404)
+            return res.send('El ID no existe');
+        }
+        else{
+        res.status(204)
+        return res.send("Los datos fueron eliminados con exito");
+        }
 
 
     } );

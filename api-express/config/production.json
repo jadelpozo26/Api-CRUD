@@ -1,7 +1,7 @@
 {
     "Mongo": {
         "dbConfig": {
-          "host": "mongoequipos.westus.azurecontainer.io",
+          "host": "mongoequipo.southcentralus.azurecontainer.io",
           "port": 27017,
           "dbName": "EquiposdeFutbol"
         },
@@ -12,7 +12,7 @@
   
       "Redis": {
         "dbConfig": {
-          "host": "redisequipo.westus.azurecontainer.io",
+          "host": "redisequipo.southcentralus.azurecontainer.io",
           "port": 6379
         },
         "credit": {

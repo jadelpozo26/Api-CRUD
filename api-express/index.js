@@ -68,6 +68,7 @@ app.get('/api/v1/read',(req, res) =>
                 console.log('futbolistas ya existian en redis');
                 res.status(200);
                 res.json(futbo);
+                return
               });
             }
             else{
@@ -117,6 +118,7 @@ app.get('/api/v1/read/:_id', (req, res) =>
                 console.log('futbolistas con id ya existian en redis');
                 res.status(200);
                 res.json(futbo);
+                return;
               });
             }
             else{
